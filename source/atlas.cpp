@@ -57,17 +57,6 @@ struct Block
 	Block &operator= (const Block &other) = delete;
 	Block &operator= (Block &&other) = delete;
 
-	Block (size_t index,
-	    const Magick::Image &img,
-	    size_t x,
-	    size_t y,
-	    size_t w,
-	    size_t h,
-	    bool flipped)
-	    : index (index), img (img), x (x), y (y), w (w), h (h), flipped (false)
-	{
-	}
-
 	Block (size_t index, const Magick::Image &img)
 	    : index (index),
 	      img (img),
@@ -79,14 +68,16 @@ struct Block
 	{
 	}
 
-	SubImage subImage (const Magick::Image &atlas) const
+	SubImage subImage (const Magick::Image &atlas, bool border) const
 	{
+		const size_t padding = border ? 1 : 0;
+
 		float left   = static_cast<float> (x) / atlas.columns ();
 		float top    = 1.0f - (static_cast<float> (y) / atlas.rows ());
-		float right  = static_cast<float> (x + w) / atlas.columns ();
-		float bottom = 1.0f - (static_cast<float> (y + h) / atlas.rows ());
+		float right  = static_cast<float> (x + w - padding) / atlas.columns ();
+		float bottom = 1.0f - (static_cast<float> (y + h - padding) / atlas.rows ());
 
-		if (img.columns () == w && img.rows () == h)
+		if (!flipped)
 			return SubImage (index, img.fileName (), left, top, right, bottom);
 
 		// rotated
@@ -431,7 +422,7 @@ Atlas Atlas::build (const std::vector<std::string> &paths, bool trim, bool borde
 
 			atlas.img = packer.composite ();
 			for (auto &block : packer.placed)
-				atlas.subs.push_back (block.subImage (atlas.img));
+				atlas.subs.push_back (block.subImage (atlas.img, border));
 
 			std::sort (std::begin (atlas.subs), std::end (atlas.subs));
 			return atlas;

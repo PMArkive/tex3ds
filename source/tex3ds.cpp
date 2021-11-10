@@ -358,16 +358,18 @@ std::vector<Magick::Image> load_image (Magick::Image &img)
 	std::vector<Magick::Image> result;
 	if (process_mode == PROCESS_NORMAL || process_mode == PROCESS_ATLAS)
 	{
+		const size_t padding = border ? 1 : 0;
+
+		output_width  = potCeil (img.columns () + 2 * padding);
+		output_height = potCeil (img.rows () + 2 * padding);
+
 		// expand canvas if necessary
 		// will catch all border cases, as the max width there is never a Po2
-		if (img.columns () != potCeil (img.columns ()) || img.rows () != potCeil (img.rows ()))
+		if (img.columns () != output_width || img.rows () != output_height)
 		{
 			Magick::Image copy = img;
 
-			img = Magick::Image (
-			    Magick::Geometry (potCeil (img.columns ()), potCeil (img.rows ())), transparent ());
-
-			const size_t padding = border ? 1 : 0;
+			img = Magick::Image (Magick::Geometry (output_width, output_height), transparent ());
 
 			img.composite (
 			    copy, Magick::Geometry (0, 0, padding, padding), Magick::OverCompositeOp);
@@ -375,7 +377,7 @@ std::vector<Magick::Image> load_image (Magick::Image &img)
 			subimage_data.push_back (SubImage (0,
 			    "",
 			    static_cast<float> (padding) / img.columns (),
-			    1.0f - static_cast<float> (padding) / img.columns (),
+			    1.0f - static_cast<float> (padding) / img.rows (),
 			    static_cast<float> (padding + copy.columns ()) / img.columns (),
 			    1.0f - static_cast<float> (padding + copy.rows ()) / img.rows ()));
 		}
@@ -383,9 +385,6 @@ std::vector<Magick::Image> load_image (Magick::Image &img)
 		{
 			subimage_data.push_back (SubImage (0, "", 0.0f, 1.0f, 1.0f, 0.0f));
 		}
-
-		output_width  = img.columns ();
-		output_height = img.rows ();
 
 		// push the source image
 		result.push_back (img);
